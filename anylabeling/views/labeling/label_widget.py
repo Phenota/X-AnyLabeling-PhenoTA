@@ -115,6 +115,7 @@ class LabelingWidget(LabelDialog):
             config = get_config()
         self._config = config
         self.label_flags = self._config["label_flags"]
+        self.classes_file = self._config["classes_file"]
 
         # set default shape colors
         Shape.line_color = QtGui.QColor(*self._config["shape"]["line_color"])
@@ -6356,6 +6357,14 @@ class LabelingWidget(LabelDialog):
 
         if updated_shapes:
             self.set_dirty()
+
+        converter = LabelConverter(classes_file=self.classes_file)
+        converter.custom_to_yolo(
+            input_file=self.label_file.filename,
+            output_file=self.label_file.filename.replace(".json", ".txt"),
+            mode="hbb",
+            skip_empty_files=True,
+        )
 
     def set_text_editing(self, enable):
         """Set text editing."""
