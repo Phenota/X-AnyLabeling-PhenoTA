@@ -3123,6 +3123,9 @@ class LabelingWidget(LabelDialog):
             items = self.file_list_widget.findItems(
                 self.image_path, Qt.MatchExactly
             )
+
+            self.export_labels_to_yolo_format()
+
             if len(items) > 0:
                 if len(items) != 1:
                     raise RuntimeError("There are duplicate files.")
@@ -3135,6 +3138,15 @@ class LabelingWidget(LabelDialog):
                 self.tr("Error saving label data"), self.tr("<b>%s</b>") % e
             )
             return False
+
+    def export_labels_to_yolo_format(self):
+        converter = LabelConverter(classes_file=self.classes_file)
+        converter.custom_to_yolo(
+            input_file=self.label_file.filename,
+            output_file=self.label_file.filename.replace(".json", ".txt"),
+            mode="hbb",
+            skip_empty_files=True,
+        )
 
     def duplicate_selected_shape(self):
         added_shapes = self.canvas.duplicate_selected_shapes()
