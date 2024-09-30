@@ -146,9 +146,21 @@ shortcuts:
   auto_label: Ctrl+A
   auto_run: Ctrl+M
 
+labels_shortcuts:
+  - label: Lymphocyte
+    shortcut: '1'
+  - label: Monocyte
+    shortcut: '2'
+  - label: Granulocyte
+    shortcut: '3'
+  - label: Dirt
+    shortcut: '4'
+  - label: Unknown
+    shortcut: '0'
+
 
 # Auto labeling
 custom_models: []
-classes_file: 'c:\Users\yoram\Downloads\detector\classes.txt'
+classes_file: 'c:\Users\yoram\Downloads\classes.txt'
 default_model: ':/yolov8n_oiv7.yaml'
 default_sam_model: ':/sam2_hiera_base.yaml'

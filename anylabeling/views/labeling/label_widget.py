@@ -1557,6 +1557,7 @@ class LabelingWidget(LabelDialog):
             run_all_images,
             run_sam_prediction,
         )
+        self.actions.tool += tuple(self.get_actions_for_classes())
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1746,6 +1747,18 @@ class LabelingWidget(LabelDialog):
             QWhatsThis.enterWhatsThisMode()
 
         self.set_text_editing(False)
+
+    def get_actions_for_classes(self):
+        action = functools.partial(utils.new_action, self)
+        labels_shortcuts = self._config.get("labels_shortcuts")
+        return [
+            action(
+                ls["label"],
+                slot=lambda checked, label=ls["label"]: self.set_label(label),
+                shortcut=ls["shortcut"],
+                tip=ls["label"],
+            ) for ls in labels_shortcuts
+        ]
 
     def set_language(self, language):
         if self._config["language"] == language:
@@ -2737,6 +2750,9 @@ class LabelingWidget(LabelDialog):
         shape.difficult = difficult
         shape.kie_linking = kie_linking
 
+        self.update_labels_and_colors_after_label_update(item, shape)
+
+    def update_labels_and_colors_after_label_update(self, item, shape):
         # Add to label history
         self.label_dialog.add_label_history(shape.label)
 
@@ -2760,6 +2776,21 @@ class LabelingWidget(LabelDialog):
             item.setText(f"{shape.label} ({shape.group_id})")
         self.set_dirty()
         self.update_combo_box()
+
+    def set_label(self, label: str):
+        shape = None
+        for canvas_shape in self.canvas.shapes:
+            if canvas_shape.label == AutoLabelingMode.OBJECT:
+                shape = canvas_shape
+                break
+
+        if not shape:
+            return
+
+        item = self.label_list.find_item_by_shape(shape)
+        shape.label = label
+
+        self.update_labels_and_colors_after_label_update(item, shape)
 
     def file_search_changed(self):
         self.import_image_folder(
