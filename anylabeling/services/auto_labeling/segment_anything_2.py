@@ -45,7 +45,7 @@ class SegmentAnything2(Model):
             "rectangle": QCoreApplication.translate("Model", "Rectangle"),
             "rotation": QCoreApplication.translate("Model", "Rotation"),
         }
-        default_output_mode = "polygon"
+        default_output_mode = "rectangle"
 
     def __init__(self, config_path, on_message) -> None:
         # Run the parent class's init method

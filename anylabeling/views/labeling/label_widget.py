@@ -288,6 +288,7 @@ class LabelingWidget(LabelDialog):
         self.canvas.set_cross_line(**self.crosshair_settings)
 
         self._central_widget = scroll_area
+        self.current_position = None
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
         for dock in ["flag_dock", "label_dock", "shape_dock", "file_dock"]:
@@ -1188,6 +1189,15 @@ class LabelingWidget(LabelDialog):
             self.tr("Auto Labeling"),
         )
 
+        # add shortcut tpo run segment-anything prediction
+        run_sam_prediction = action(
+            "Run SAM Prediction",
+            self.run_sam_prediction,
+            "X",
+            "predict",
+            "predict"
+        )
+
         # Label list context menu.
         label_menu = QtWidgets.QMenu()
         utils.add_actions(label_menu, (edit, delete, union_selection))
@@ -1545,6 +1555,7 @@ class LabelingWidget(LabelDialog):
             fit_width,
             toggle_auto_labeling_widget,
             run_all_images,
+            run_sam_prediction,
         )
 
         layout = QHBoxLayout()
@@ -1589,7 +1600,17 @@ class LabelingWidget(LabelDialog):
         self.auto_labeling_widget.model_manager.request_next_files_requested.connect(
             lambda: self.inform_next_files(self.filename)
         )
-        self.auto_labeling_widget.hide()  # Hide by default
+        # self.auto_labeling_widget.hide()  # Hide by default
+        # read default segment-anything model from config file and load it
+        default_sam_model = self._config.get("default_sam_model")
+        if default_sam_model:
+            self.auto_labeling_widget.model_manager_sam.load_model(default_sam_model)
+
+        # read default model from config file and load it
+        default_model = self._config.get("default_model")
+        if default_model:
+            self.auto_labeling_widget.model_manager.load_model(default_model)
+
         central_layout.addWidget(self.label_instruction)
         central_layout.addWidget(self.auto_labeling_widget)
         central_layout.addWidget(scroll_area)
@@ -3271,6 +3292,7 @@ class LabelingWidget(LabelDialog):
         - shape_width (float): The width of the shape.
         - pos (QPointF): The current mouse coordinates inside the shape.
         """
+        self.current_position = (pos.x(), pos.y())
         num_images = len(self.image_list)
         basename = osp.basename(str(self.filename))
         if shape_height > 0 and shape_width > 0:
@@ -6397,3 +6419,19 @@ class LabelingWidget(LabelDialog):
             self.shape_text_edit.textChanged.disconnect()
             self.shape_text_edit.setPlainText("")
             self.shape_text_edit.textChanged.connect(self.shape_text_changed)
+
+    def run_sam_prediction(self):
+        """Run segment-anything prediction"""
+        marks = []
+        marks.append(
+            {
+                "type": "point",
+                "data": [
+                    int(self.current_position[0]),
+                    int(self.current_position[1]),
+                ],
+                "label": 1,
+            }
+        )
+
+        self.auto_labeling_widget.run_prediction_sam(marks)

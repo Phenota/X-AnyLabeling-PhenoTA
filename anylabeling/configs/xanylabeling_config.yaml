@@ -149,3 +149,6 @@ shortcuts:
 
 # Auto labeling
 custom_models: []
+classes_file: 'c:\Users\yoram\Downloads\detector\classes.txt'
+default_model: ':/yolov8n_oiv7.yaml'
+default_sam_model: ':/sam2_hiera_base.yaml'

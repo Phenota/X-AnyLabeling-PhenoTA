@@ -24,6 +24,14 @@ class AutoLabelingWidget(QWidget):
         current_dir = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_dir, "auto_labeling.ui"), self)
 
+        # create model manager for segment-anything to help with work of marking rectangle around cell
+        self.model_manager_sam = ModelManager()
+        self.model_manager_sam.new_auto_labeling_result.connect(
+            lambda auto_labeling_result: self.parent.new_shapes_from_auto_labeling(
+                auto_labeling_result
+            )
+        )
+
         self.model_manager = ModelManager()
         self.model_manager.model_configs_changed.connect(
             lambda model_list: self.update_model_configs(model_list)
@@ -203,6 +211,14 @@ class AutoLabelingWidget(QWidget):
         """Run prediction"""
         if self.parent.filename is not None:
             self.model_manager.predict_shapes_threading(
+                self.parent.image, self.parent.filename
+            )
+
+    def run_prediction_sam(self, marks):
+        # run segment-anything prediction
+        if self.parent.filename is not None:
+            self.model_manager_sam.set_auto_labeling_marks(marks)
+            self.model_manager_sam.predict_shapes_threading(
                 self.parent.image, self.parent.filename
             )
 
