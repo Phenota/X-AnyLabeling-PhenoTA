@@ -1753,10 +1753,10 @@ class LabelingWidget(LabelDialog):
         labels_shortcuts = self._config.get("labels_shortcuts")
         return [
             action(
-                ls["label"],
+                "", # empty label as these actions are just for the keyboard shortcuts
                 slot=lambda checked, label=ls["label"]: self.set_label(label),
                 shortcut=ls["shortcut"],
-                tip=ls["label"],
+                tip="",
             ) for ls in labels_shortcuts
         ]
 
@@ -2715,6 +2715,7 @@ class LabelingWidget(LabelDialog):
         shape = item.shape()
         if shape is None:
             return
+        shape_original_label = shape.label
         (
             text,
             flags,
@@ -2749,6 +2750,7 @@ class LabelingWidget(LabelDialog):
         shape.description = description
         shape.difficult = difficult
         shape.kie_linking = kie_linking
+        shape.label_edited = shape.label != shape_original_label
 
         self.update_labels_and_colors_after_label_update(item, shape)
 
@@ -3156,6 +3158,7 @@ class LabelingWidget(LabelDialog):
             )
 
             self.export_labels_to_yolo_format()
+            self.export_info_to_metadata()
 
             if len(items) > 0:
                 if len(items) != 1:
@@ -3178,6 +3181,29 @@ class LabelingWidget(LabelDialog):
             mode="hbb",
             skip_empty_files=True,
         )
+
+    def export_info_to_metadata(self):
+        input_file = self.label_file.filename
+        output_file = input_file.replace(".json", ".metadata")
+        if osp.exists(input_file):
+            with open(input_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            pathlib.Path(output_file).touch()
+            return
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            for shape in data["shapes"]:
+                shape_type = shape["shape_type"]
+                if shape_type == "rectangle":
+                    added: bool = False
+                    original_confidence_score = shape["score"]
+                    if original_confidence_score is None:
+                        original_confidence_score = 1.0
+                        added = True
+                    label_edited: bool = shape["label_edited"]
+                    rect_edited: bool = shape["geometry_edited"]
+                    f.write(f"{original_confidence_score}, {added}, {label_edited}, {rect_edited}\n")
 
     def duplicate_selected_shape(self):
         added_shapes = self.canvas.duplicate_selected_shapes()

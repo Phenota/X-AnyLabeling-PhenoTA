@@ -78,6 +78,8 @@ class Shape:
         self.difficult = difficult
         self.kie_linking = kie_linking
         self.points = []
+        self.geometry_edited = False
+        self.label_edited = False
         self.fill = False
         self.selected = False
         self.shape_type = shape_type
@@ -122,6 +124,8 @@ class Shape:
             "flags": self.flags,
             "attributes": self.attributes,
             "kie_linking": self.kie_linking,
+            "geometry_edited": self.geometry_edited,
+            "label_edited": self.label_edited
         }
         if self.shape_type == "rotation":
             dictData["direction"] = self.direction
@@ -135,6 +139,8 @@ class Shape:
         self.label = data["label"]
         self.score = data.get("score")
         self.points = [QtCore.QPointF(p[0], p[1]) for p in data["points"]]
+        self.geometry_edited = data.get("geometry_edited", False)
+        self.label_edited = data.get("label_edited", False)
         self.group_id = data.get("group_id")
         self.description = data.get("description", "")
         self.difficult = data.get("difficult", False)
@@ -396,10 +402,12 @@ class Shape:
     def move_by(self, offset):
         """Move all points by an offset"""
         self.points = [p + offset for p in self.points]
+        self.geometry_edited = True
 
     def move_vertex_by(self, i, offset):
         """Move a specific vertex by an offset"""
         self.points[i] = self.points[i] + offset
+        self.geometry_edited = True
 
     def highlight_vertex(self, i, action):
         """Highlight a vertex appropriately based on the current action
