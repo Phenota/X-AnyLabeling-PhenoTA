@@ -164,3 +164,5 @@ custom_models: []
 classes_file: 'c:\Users\yoram\Downloads\classes.txt'
 default_model: ':/yolov8n_oiv7.yaml'
 default_sam_model: ':/sam2_hiera_base.yaml'
+run_sam_prediction_shortcut: 'X'
+finish_review_image_shortcut: 'V'

@@ -1191,11 +1191,20 @@ class LabelingWidget(LabelDialog):
 
         # add shortcut tpo run segment-anything prediction
         run_sam_prediction = action(
-            "Run SAM Prediction",
+            "",
             self.run_sam_prediction,
-            "X",
-            "predict",
-            "predict"
+            self._config.get("run_sam_prediction_shortcut", "X"),
+            "",
+            ""
+        )
+
+        # add shortcut to mark finish review of image (good for when no cells detected)
+        finish_review_image_action = action(
+            "",
+            self.finish_review_image,
+            self._config.get("finish_review_image_shortcut", "V"),
+            "",
+            ""
         )
 
         # Label list context menu.
@@ -1556,6 +1565,7 @@ class LabelingWidget(LabelDialog):
             toggle_auto_labeling_widget,
             run_all_images,
             run_sam_prediction,
+            finish_review_image_action,
         )
         self.actions.tool += tuple(self.get_actions_for_classes())
 
@@ -6504,3 +6514,6 @@ class LabelingWidget(LabelDialog):
         )
 
         self.auto_labeling_widget.run_prediction_sam(marks)
+
+    def finish_review_image(self):
+        self.set_dirty()
