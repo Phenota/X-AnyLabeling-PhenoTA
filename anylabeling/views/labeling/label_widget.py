@@ -1,11 +1,15 @@
+import datetime
 import functools
 import html
 import math
 import json
 import os
 import os.path as osp
+import random
 import shutil
 import pathlib
+from time import strftime
+
 import cv2
 import re
 import yaml
@@ -33,6 +37,8 @@ from PyQt5.QtWidgets import (
 )
 
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
+from .utils.img_metadata_utils import get_metadata_from_jpg_file
+from .widgets.filter_files_widget import FilesFilterWidget
 
 from ...app_info import (
     __appname__,
@@ -63,6 +69,7 @@ from .widgets import (
     UniqueLabelQListWidget,
     ZoomWidget,
 )
+from anylabeling.views.labeling.utils.duckdb_utils import DuckDB
 
 LABEL_COLORMAP = imgviz.label_colormap()
 
@@ -116,6 +123,7 @@ class LabelingWidget(LabelDialog):
         self._config = config
         self.label_flags = self._config["label_flags"]
         self.classes_file = self._config["classes_file"]
+        self.db = DuckDB()
 
         # set default shape colors
         Shape.line_color = QtGui.QColor(*self._config["shape"]["line_color"])
@@ -232,9 +240,12 @@ class LabelingWidget(LabelDialog):
         self.file_list_widget.itemSelectionChanged.connect(
             self.file_selection_changed
         )
+        self.filter_files_widget = FilesFilterWidget(parent=self, db=self.db)
+
         file_list_layout = QtWidgets.QVBoxLayout()
         file_list_layout.setContentsMargins(0, 0, 0, 0)
         file_list_layout.setSpacing(0)
+        file_list_layout.addWidget(self.filter_files_widget)
         file_list_layout.addWidget(self.file_search)
         file_list_layout.addWidget(self.file_list_widget)
         self.file_dock = QtWidgets.QDockWidget(self.tr("Files"), self)
@@ -1727,6 +1738,8 @@ class LabelingWidget(LabelDialog):
             self.file_search.setText(config["file_search"])
             self.file_search_changed()
 
+        self.filter_files_widget.reload_combo_boxes_values()
+
         # XXX: Could be completely declarative.
         # Restore application settings.
         self.settings = QtCore.QSettings("anylabeling", "anylabeling")
@@ -2805,11 +2818,29 @@ class LabelingWidget(LabelDialog):
         self.update_labels_and_colors_after_label_update(item, shape)
 
     def file_search_changed(self):
-        self.import_image_folder(
-            self.last_open_dir,
-            pattern=self.file_search.text(),
-            load=False,
-        )
+        # self.import_image_folder(
+        #     self.last_open_dir,
+        #     pattern=self.file_search.text(),
+        #     load=False,
+        # )
+        self.filter_files_in_file_list()
+
+    def filter_files_in_file_list(self):
+        pattern = self.file_search.text()
+        filters = [("filepath", "LIKE", f"'%{pattern}%'")]
+        is_reviewed_filter_value = self.filter_files_widget.get_was_reviewed_filter_value()
+        if is_reviewed_filter_value is not None:
+            filters.append(("is_reviewed", "=", "TRUE" if is_reviewed_filter_value else "FALSE"))
+        sample_id_filter_value = self.filter_files_widget.get_sample_id_filter_value()
+        if sample_id_filter_value:
+            filters.append(("sample_id", "=", f"'{sample_id_filter_value}'"))
+        objective_filter_value = self.filter_files_widget.get_objective_filter_value()
+        if objective_filter_value:
+            filters.append(("objective", "=", f"'{objective_filter_value}'"))
+        filtered_file_list = set(self.db.get_values_by_filter(filters))
+        for i in range(self.file_list_widget.count()):
+            item = self.file_list_widget.item(i)
+            item.setHidden(item.text() not in filtered_file_list)
 
     def file_selection_changed(self):
         items = self.file_list_widget.selectedItems()
@@ -6189,15 +6220,28 @@ class LabelingWidget(LabelDialog):
                 label_file = self.output_dir + "/" + label_file_without_path
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            is_reviewed = False
             if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
                 label_file
             ):
+                is_reviewed = True
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
             self.file_list_widget.addItem(item)
             self.fn_to_index[filename] = self.file_list_widget.count() - 1
             utils.process_image_exif(filename)
+
+            # Insert image metadata to the DuckDB database for easy querying
+            img_metadata: dict = get_metadata_from_jpg_file(filename)
+            img_timestamp = datetime.datetime.fromtimestamp(osp.getmtime(filename)).strftime("%Y-%m-%d %H:%M:%S")
+            self.db.insert_data(filepath=filename,
+                                timestamp=img_timestamp,
+                                sample_id=img_metadata.get("sample_id", ""),
+                                is_reviewed=is_reviewed,
+                                objective=img_metadata.get("objective", ""),
+                                illumination_type=img_metadata.get("illumination_type", ""),
+                                )
         self.open_next_image(load=load)
 
     def scan_all_images(self, folder_path):
@@ -6516,4 +6560,5 @@ class LabelingWidget(LabelDialog):
         self.auto_labeling_widget.run_prediction_sam(marks)
 
     def finish_review_image(self):
+        self.db.update_value_by_column(self.filename, "is_reviewed", True)
         self.set_dirty()
