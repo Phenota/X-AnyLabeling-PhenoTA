@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QComboBox, QFormLayout
+from PyQt5.QtCore import QDate
+from PyQt5.QtWidgets import QWidget, QComboBox, QFormLayout, QDateEdit
 
 from anylabeling.views.labeling.utils.duckdb_utils import DuckDB
 
@@ -23,9 +24,15 @@ class FilesFilterWidget(QWidget):
         self.objective_combo_box.currentIndexChanged.connect(
             parent.filter_files_in_file_list
         )
+        self.from_date_edit = QDateEdit(calendarPopup=True, displayFormat="yyyy-MM-dd", date=QDate(2024, 1, 1))
+        self.from_date_edit.dateChanged.connect(parent.filter_files_in_file_list)
+        self.until_date_edit = QDateEdit(calendarPopup=True, displayFormat="yyyy-MM-dd", date=QDate(2025, 12, 31))
+        self.until_date_edit.dateChanged.connect(parent.filter_files_in_file_list)
 
         layout = QFormLayout()
         layout.addRow("Reviewed", self.was_reviewed_combo_box)
+        layout.addRow("From", self.from_date_edit)
+        layout.addRow("Until", self.until_date_edit)
         layout.addRow("Sample ID", self.sample_id_combo_box)
         layout.addRow("Objective", self.objective_combo_box)
         self.setLayout(layout)
@@ -50,3 +57,6 @@ class FilesFilterWidget(QWidget):
         if self.objective_combo_box.currentText() == "":
             return None
         return self.objective_combo_box.currentText()
+
+    def get_dates_range_filter_value(self) -> (str, str):
+        return self.from_date_edit.date().toString("yyyy-MM-dd"), self.until_date_edit.date().toString("yyyy-MM-dd")

@@ -2837,6 +2837,9 @@ class LabelingWidget(LabelDialog):
         objective_filter_value = self.filter_files_widget.get_objective_filter_value()
         if objective_filter_value:
             filters.append(("objective", "=", f"'{objective_filter_value}'"))
+        date_range_filter_value = self.filter_files_widget.get_dates_range_filter_value()
+        if date_range_filter_value:
+            filters.append(("timestamp", "BETWEEN", f"'{date_range_filter_value[0]}' AND '{date_range_filter_value[1]}'"))
         filtered_file_list = set(self.db.get_values_by_filter(filters))
         for i in range(self.file_list_widget.count()):
             item = self.file_list_widget.item(i)
