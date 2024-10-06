@@ -1,4 +1,11 @@
+import os
+from datetime import datetime
+from pathlib import Path
+from time import mktime
+
 import duckdb
+
+from anylabeling.views.labeling.utils.img_metadata_utils import update_metadata_to_jpg_file
 
 
 class DuckDB:
@@ -50,5 +57,36 @@ def main():
     db.close_connection()
 
 
+def generate_files_with_metadata(src_dir, dst_dir):
+    """
+    Code to duplicate src_dir with many cell images to 30 folders so we get 1000 images in 30 folders
+    During duplicate we also set timestamp and metadata to the images
+    """
+    OBJECTIVES = ['x50', 'x100']
+    ILLUMINATION_TYPES = ['backlight', 'frontlight']
+
+    src_path = Path(src_dir)
+    dst_path = Path(dst_dir)
+    src_img_files = [f for f in src_path.glob('**/*.jpg') if f.is_file()]
+    for i in range(30):
+        sub_folder = dst_path / f"folder_{i+1:02}"
+        sub_folder.mkdir(parents=True, exist_ok=True)
+        for img_file in src_img_files:
+            img_file_dst = sub_folder / img_file.name
+            img_file_dst.write_bytes(img_file.read_bytes())
+            metadata = dict(
+                sample_id=f"SAMPLE_ID_{i+1:02}",
+                objective=OBJECTIVES[i % len(OBJECTIVES)],
+                illumination_type=ILLUMINATION_TYPES[i % len(ILLUMINATION_TYPES)]
+            )
+            update_metadata_to_jpg_file(str(img_file_dst), metadata)
+            ts = datetime(2024, 8, i+1, 9, 9, 9)
+            ts_utime = mktime(ts.timetuple())
+            os.utime(str(img_file_dst), (ts_utime, ts_utime))
+
+
+
 if __name__ == '__main__':
     main()
+    # generate_files_with_metadata(r"c:\Users\yoram\Downloads\detector",
+    #                              r"c:\Users\yoram\Downloads\hier_images")
