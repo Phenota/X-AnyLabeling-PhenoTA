@@ -22,7 +22,22 @@ switch_to_checked: false
 
 flags: null
 label_flags: null
-labels: null
+labels:
+  - RBC
+  - Lymphocyte
+  - Monocyte
+  - Granulocyte
+  - Dirt
+  - Neutrophil
+  - Basophil
+  - Eosinophil
+  - Platelet
+  - Clamp
+  - LGL
+  - Atypical
+  - Aberrant
+  - Unknown
+  - Smudge
 file_search: null
 sort_labels: true
 validate_label: null
