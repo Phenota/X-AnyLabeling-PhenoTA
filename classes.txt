@@ -1,0 +1,13 @@
+RBC
+Lymphocyte
+Monocyte
+Granulocyte
+Dirt
+Neutrophil
+Basophil
+Eosinophil
+Platelet
+Clamp
+LGL
+Atypical
+Aberrant

@@ -147,22 +147,40 @@ shortcuts:
   auto_run: Ctrl+M
 
 labels_shortcuts:
-  - label: Lymphocyte
+  - label: RBC
     shortcut: '1'
-  - label: Monocyte
+  - label: Lymphocyte
     shortcut: '2'
-  - label: Granulocyte
+  - label: Monocyte
     shortcut: '3'
-  - label: Dirt
+  - label: Granulocyte
     shortcut: '4'
+  - label: Dirt
+    shortcut: '5'
+  - label: Neutrophil
+    shortcut: '6'
+  - label: Basophil
+    shortcut: '7'
+  - label: Eosinophil
+    shortcut: '8'
+  - label: Platelet
+    shortcut: '9'
+  - label: Clamp
+    shortcut: Ctrl+9
+  - label: LGL
+    shortcut: Ctrl+1
+  - label: Atypical
+    shortcut: Ctrl+2
+  - label: Aberrant
+    shortcut: Ctrl+3
   - label: Unknown
     shortcut: '0'
 
 
 # Auto labeling
 custom_models: []
-classes_file: 'c:\Users\yoram\Downloads\classes.txt'
+classes_file: 'classes.txt'
 default_model: ':/yolov8n_oiv7.yaml'
 default_sam_model: ':/sam2_hiera_base.yaml'
-run_sam_prediction_shortcut: 'X'
+run_sam_prediction_shortcut: 32
 finish_review_image_shortcut: 'V'

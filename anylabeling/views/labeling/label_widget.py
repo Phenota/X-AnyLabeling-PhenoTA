@@ -1204,7 +1204,7 @@ class LabelingWidget(LabelDialog):
         run_sam_prediction = action(
             "",
             self.run_sam_prediction,
-            self._config.get("run_sam_prediction_shortcut", "X"),
+            self._config.get("run_sam_prediction_shortcut", 32),
             "",
             ""
         )
