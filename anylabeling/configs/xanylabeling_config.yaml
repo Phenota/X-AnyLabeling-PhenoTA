@@ -175,6 +175,8 @@ labels_shortcuts:
     shortcut: Ctrl+3
   - label: Unknown
     shortcut: '0'
+  - label: Smudge
+    shortcut: Ctrl+4
 
 
 # Auto labeling

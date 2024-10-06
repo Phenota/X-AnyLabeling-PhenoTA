@@ -12,3 +12,4 @@ LGL
 Atypical
 Aberrant
 Unknown
+Smudge
