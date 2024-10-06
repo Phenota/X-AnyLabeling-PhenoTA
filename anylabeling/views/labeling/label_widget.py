@@ -1674,12 +1674,12 @@ class LabelingWidget(LabelDialog):
         right_sidebar_layout.addWidget(
             self.shape_text_label, 0, Qt.AlignCenter
         )
-        right_sidebar_layout.addWidget(self.shape_text_edit)
-        right_sidebar_layout.addWidget(self.flag_dock)
-        right_sidebar_layout.addWidget(self.label_dock)
-        right_sidebar_layout.addWidget(self.label_filter_combobox)
-        right_sidebar_layout.addWidget(self.shape_dock)
-        right_sidebar_layout.addWidget(self.file_dock)
+        right_sidebar_layout.addWidget(self.shape_text_edit, 1)
+        right_sidebar_layout.addWidget(self.flag_dock, 1)
+        right_sidebar_layout.addWidget(self.label_dock, 6)
+        right_sidebar_layout.addWidget(self.label_filter_combobox, 1)
+        right_sidebar_layout.addWidget(self.shape_dock, 7)
+        right_sidebar_layout.addWidget(self.file_dock, 20)
         self.file_dock.setFeatures(QDockWidget.DockWidgetFloatable)
         dock_features = (
             ~QDockWidget.DockWidgetMovable
@@ -1875,6 +1875,11 @@ class LabelingWidget(LabelDialog):
         # Even if we autosave the file, we keep the ability to undo
         self.actions.undo.setEnabled(self.canvas.is_shape_restorable)
 
+        title = "PhenoTA Image Labeling Tool"  # __appname__
+        if self.filename is not None:
+            title = f"{title} - {self.filename}*"
+        self.setWindowTitle(title)
+
         if self._config["auto_save"]:
             label_file = osp.splitext(self.image_path)[0] + ".json"
             if self.output_dir:
@@ -1884,10 +1889,7 @@ class LabelingWidget(LabelDialog):
             return
         self.dirty = True
         self.actions.save.setEnabled(True)
-        title = __appname__
-        if self.filename is not None:
-            title = f"{title} - {self.filename}*"
-        self.setWindowTitle(title)
+
 
     def set_clean(self):
         self.dirty = False
@@ -3609,6 +3611,7 @@ class LabelingWidget(LabelDialog):
                 self.fn_to_index[str(filename)]
             )
             self.file_list_widget.repaint()
+            self.set_dirty()
             return False
 
         self.reset_state()
