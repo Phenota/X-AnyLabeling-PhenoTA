@@ -126,6 +126,7 @@ class LabelingWidget(LabelDialog):
         self.label_flags = self._config["label_flags"]
         self.classes_file = self._config["classes_file"]
         self.db = DuckDB()
+        self.images_folder = None
 
         # set default shape colors
         Shape.line_color = QtGui.QColor(*self._config["shape"]["line_color"])
@@ -713,6 +714,10 @@ class LabelingWidget(LabelDialog):
         statistics = action(
             self.tr("&Statistics"),
             self.show_stats,
+        )
+        reload_images_folder = action(
+            self.tr("&Reload Images Folder"),
+            self.reload_images_folder
         )
 
         documentation = action(
@@ -1441,6 +1446,7 @@ class LabelingWidget(LabelDialog):
                 polygon_to_hbb,
                 None,
                 statistics,
+                reload_images_folder,
             ),
         )
         utils.add_actions(
@@ -1739,6 +1745,7 @@ class LabelingWidget(LabelDialog):
 
         if filename is not None and osp.isdir(filename):
             self.import_image_folder(filename, load=False)
+            self.images_folder = filename
         else:
             self.filename = filename
 
@@ -3446,7 +3453,7 @@ class LabelingWidget(LabelDialog):
                     % (
                         int(pos.x()),
                         int(pos.y()),
-                        basename,
+                        self.filename,
                         current_index,
                         num_images,
                     )
@@ -3769,12 +3776,12 @@ class LabelingWidget(LabelDialog):
             num_images = len(self.image_list)
             current_index = self.fn_to_index[str(filename)] + 1
             msg = str(self.tr("Loaded %s [%d/%d]")) % (
-                basename,
+                filename,
                 current_index,
                 num_images,
             )
         else:
-            msg = str(self.tr("Loaded %s")) % basename
+            msg = str(self.tr("Loaded %s")) % filename
         self.status(msg)
         return True
 
@@ -6225,6 +6232,7 @@ class LabelingWidget(LabelDialog):
         self.last_open_dir = dirpath
         self.filename = None
         self.file_list_widget.clear()
+        self.db.clear()
         for filename in self.scan_all_images(dirpath):
             if pattern and pattern not in filename:
                 continue
@@ -6595,3 +6603,7 @@ class LabelingWidget(LabelDialog):
         dlg.setText(text)
         dlg.setFont(QFont("Consolas", 12))
         dlg.exec()
+
+    def reload_images_folder(self):
+        self.import_image_folder(self.images_folder)
+        self.filter_files_in_file_list()

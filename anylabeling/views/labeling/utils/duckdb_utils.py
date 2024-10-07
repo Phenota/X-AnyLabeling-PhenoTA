@@ -20,6 +20,9 @@ class DuckDB:
         self.connection.execute("CREATE TABLE images (filepath VARCHAR, timestamp TIMESTAMP, sample_id VARCHAR, "
                                 "is_reviewed BOOLEAN, objective VARCHAR, illumination_type VARCHAR, labels JSON)")
 
+    def clear(self):
+        self.connection.execute("DELETE FROM images")
+
     def insert_data(self, filepath: str, timestamp: str, sample_id: str, is_reviewed: bool, objective: str,
                     illumination_type: str, labels: dict):
         self.connection.execute("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?)",
