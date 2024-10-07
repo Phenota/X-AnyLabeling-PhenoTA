@@ -1,4 +1,6 @@
+import json
 import os
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from time import mktime
@@ -16,12 +18,12 @@ class DuckDB:
 
     def create_table(self):
         self.connection.execute("CREATE TABLE images (filepath VARCHAR, timestamp TIMESTAMP, sample_id VARCHAR, "
-                                "is_reviewed BOOLEAN, objective VARCHAR, illumination_type VARCHAR)")
+                                "is_reviewed BOOLEAN, objective VARCHAR, illumination_type VARCHAR, labels JSON)")
 
     def insert_data(self, filepath: str, timestamp: str, sample_id: str, is_reviewed: bool, objective: str,
-                    illumination_type: str):
-        self.connection.execute("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?)",
-                                (filepath, timestamp, sample_id, is_reviewed, objective, illumination_type))
+                    illumination_type: str, labels: dict):
+        self.connection.execute("INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                (filepath, timestamp, sample_id, is_reviewed, objective, illumination_type, labels))
 
     def select_data(self, query):
         self.connection.execute(query)
@@ -43,6 +45,19 @@ class DuckDB:
         query += " AND ".join([f"{f[0]} {f[1]} {f[2]}" for f in filters])
         result = self.connection.execute(query).fetchall()
         return [r[0] for r in result]
+
+    def get_number_of_images_reviewed(self):
+        return self.connection.execute("SELECT COUNT(*) FROM images WHERE is_reviewed = TRUE").fetchone()[0]
+
+    def get_number_of_images(self):
+        return self.connection.execute("SELECT COUNT(*) FROM images").fetchone()[0]
+
+    def get_cell_types(self) -> Counter:
+        summary = Counter()
+        cells = self.connection.execute("SELECT labels FROM images").fetchall()
+        for cell in cells:
+            summary += Counter(json.loads(cell[0]))
+        return summary
 
     def close_connection(self):
         self.connection.close()

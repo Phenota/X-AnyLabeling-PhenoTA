@@ -38,6 +38,7 @@ class LabelFile:
         self.image_path = None
         self.image_data = None
         self.image_dir = image_dir
+        self.labels = dict()
         if filename is not None:
             self.load(filename)
         self.filename = filename
@@ -83,6 +84,8 @@ class LabelFile:
                         data["shapes"][i]["points"] = (
                             utils.rectangle_from_diagonal(shape_points)
                         )
+                    shape_label = data["shapes"][i]["label"]
+                    self.labels[shape_label] = self.labels.get(shape_label, 0) + 1
 
             data["imagePath"] = osp.basename(data["imagePath"])
             if data["imageData"] is not None:

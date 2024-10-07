@@ -8,6 +8,7 @@ import os.path as osp
 import random
 import shutil
 import pathlib
+from collections import Counter
 from time import strftime
 
 import cv2
@@ -21,6 +22,7 @@ import natsort
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QDockWidget,
     QGridLayout,
@@ -707,6 +709,10 @@ class LabelingWidget(LabelDialog):
             tip=self.tr(
                 "Perform conversion from polygon to horizontal bounding box"
             ),
+        )
+        statistics = action(
+            self.tr("&Statistics"),
+            self.show_stats,
         )
 
         documentation = action(
@@ -1433,6 +1439,8 @@ class LabelingWidget(LabelDialog):
                 hbb_to_obb,
                 obb_to_hbb,
                 polygon_to_hbb,
+                None,
+                statistics,
             ),
         )
         utils.add_actions(
@@ -6227,11 +6235,13 @@ class LabelingWidget(LabelDialog):
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             is_reviewed = False
+            labels = dict()
             if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
                 label_file
             ):
                 is_reviewed = True
                 item.setCheckState(Qt.Checked)
+                labels = LabelFile(label_file).labels
             else:
                 item.setCheckState(Qt.Unchecked)
             self.file_list_widget.addItem(item)
@@ -6247,6 +6257,7 @@ class LabelingWidget(LabelDialog):
                                 is_reviewed=is_reviewed,
                                 objective=img_metadata.get("objective", ""),
                                 illumination_type=img_metadata.get("illumination_type", ""),
+                                labels=labels,
                                 )
         self.open_next_image(load=load)
 
@@ -6568,3 +6579,19 @@ class LabelingWidget(LabelDialog):
     def finish_review_image(self):
         self.db.update_value_by_column(self.filename, "is_reviewed", True)
         self.set_dirty()
+
+    def show_stats(self):
+        num_of_images = self.db.get_number_of_images()
+        num_of_reviewed_images = self.db.get_number_of_images_reviewed()
+        cell_stats: Counter = self.db.get_cell_types()
+        cells_count = cell_stats.total()
+
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Statistics")
+        text = (f"Reviewed images     : {num_of_reviewed_images}/{num_of_images} "
+                f"({num_of_reviewed_images/num_of_images*100:.2f}%)\n")
+        for cell_type, count in cell_stats.items():
+            text += f"\n{cell_type: <20}: {count: <4} ({count/cells_count*100:.2f}%)"
+        dlg.setText(text)
+        dlg.setFont(QFont("Consolas", 12))
+        dlg.exec()
