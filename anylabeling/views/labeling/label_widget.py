@@ -1746,6 +1746,7 @@ class LabelingWidget(LabelDialog):
         if filename is not None and osp.isdir(filename):
             self.import_image_folder(filename, load=False)
             self.images_folder = filename
+            self.save_classes_to_yaml_file(filename)
         else:
             self.filename = filename
 
@@ -1785,6 +1786,17 @@ class LabelingWidget(LabelDialog):
             QWhatsThis.enterWhatsThisMode()
 
         self.set_text_editing(False)
+
+    def save_classes_to_yaml_file(self, images_root_folder):
+        if not self.classes_file:
+            return
+        labels = []
+        with open(self.classes_file, "r", encoding="utf-8") as f:
+            labels = f.read().splitlines()
+        data = dict()
+        data["names"] = labels
+        with open(os.path.join(images_root_folder, "data.yaml"), "w", encoding="utf-8") as f:
+            yaml.dump(data, f, default_flow_style=False)
 
     def get_actions_for_classes(self):
         action = functools.partial(utils.new_action, self)
