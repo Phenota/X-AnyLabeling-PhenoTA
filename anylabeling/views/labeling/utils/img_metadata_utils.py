@@ -23,8 +23,7 @@ def get_metadata_from_jpg_file(filename: str) -> dict:
     get metadata from an JPG image file.
     """
     img = Image.open(filename)
-    metadata = json.loads(img.info.get('comment', ''))
-    return metadata
+    return get_metadata_from_img(img)
 
 
 def get_metadata_from_img(img: Image) -> dict:
