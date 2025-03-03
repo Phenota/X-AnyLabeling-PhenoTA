@@ -1,23 +1,135 @@
+import numbers
 import os
+from dataclasses import dataclass
+from typing import Tuple, Optional, Union, Sized
+
 import cv2
 import numpy as np
-
 from PyQt5 import QtCore
 from PyQt5.QtCore import QCoreApplication
 
 from anylabeling.app_info import __preferred_device__
-from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.logger import logger
+from anylabeling.views.labeling.shape import Shape
 from anylabeling.views.labeling.utils.opencv import qt_img_to_rgb_cv_img
+from .engines.build_onnx_engine import OnnxBaseModel
 from .model import Model
 from .types import AutoLabelingResult
-from .engines.build_onnx_engine import OnnxBaseModel
 
 YOLO_NAS_DEFAULT_PROCESSING_STEPS = [
     {"DetLongMaxRescale": None},
     {"CenterPad": {"pad_value": 114}},
-    {"Standardize": {"max_value": 255.0}},
+    # {"Standardize": {"max_value": 255.0}},
 ]
+
+@dataclass
+class PaddingCoordinates:
+    top: int
+    bottom: int
+    left: int
+    right: int
+
+
+def _rescale_image(image: np.ndarray, target_shape: Tuple[int, int], interpolation_method: Optional = cv2.INTER_LINEAR) -> np.ndarray:
+    """Rescale image to target_shape, without preserving aspect ratio.
+
+    :param image:           Image to rescale. (H, W, C) or (H, W).
+    :param target_shape:    Target shape to rescale to (H, W).
+    :return:                Rescaled image.
+    """
+    height, width = target_shape[:2]
+    return cv2.resize(image, dsize=(width, height), interpolation=interpolation_method)
+
+
+def _get_bottom_right_padding_coordinates(input_shape: Tuple[int, int], output_shape: Tuple[int, int]) -> PaddingCoordinates:
+    """Get parameters for padding an image to given output shape, in bottom right mode
+    (i.e. image will be at top-left while bottom-right corner will be padded).
+
+    :param input_shape:  Shape of the input image.
+    :param output_shape: Shape to resize to.
+    :return:             Padding parameters.
+    """
+    pad_height, pad_width = output_shape[0] - input_shape[0], output_shape[1] - input_shape[1]
+    return PaddingCoordinates(top=0, bottom=pad_height, left=0, right=pad_width)
+
+
+def _pad_image(image: np.ndarray, padding_coordinates: PaddingCoordinates, pad_value: Union[int, Tuple[int, ...]]) -> np.ndarray:
+    """Pad an image.
+
+    :param image:       Image to shift. (H, W, C) or (H, W).
+    :param pad_h:       Tuple of (padding_top, padding_bottom).
+    :param pad_w:       Tuple of (padding_left, padding_right).
+    :param pad_value:   Padding value. Can be a single scalar (Same value for all channels) or a tuple of values.
+                        In the latter case, the tuple length must be equal to the number of channels.
+    :return:            Image shifted according to padding coordinates.
+    """
+    pad_h = (padding_coordinates.top, padding_coordinates.bottom)
+    pad_w = (padding_coordinates.left, padding_coordinates.right)
+
+    if len(image.shape) == 3:
+        _, _, num_channels = image.shape
+
+        if isinstance(pad_value, numbers.Number):
+            pad_value = tuple([pad_value] * num_channels)
+        else:
+            if isinstance(pad_value, Sized) and len(pad_value) != num_channels:
+                raise ValueError(f"A pad_value tuple ({pad_value} length should be {num_channels} for an image with {num_channels} channels")
+
+            pad_value = tuple(pad_value)
+
+        constant_values = ((pad_value, pad_value), (pad_value, pad_value), (0, 0))
+        # Fixes issue with numpy deprecation warning since constant_values is ragged array (Have to explicitly specify object dtype)
+        constant_values = np.array(constant_values, dtype=np.object_)
+
+        padding_values = (pad_h, pad_w, (0, 0))
+    else:
+        if isinstance(pad_value, numbers.Number):
+            pass
+        elif isinstance(pad_value, Sized):
+            if len(pad_value) != 1:
+                raise ValueError(f"A pad_value tuple ({pad_value} length should be 1 for a grayscale image")
+            else:
+                (pad_value,) = pad_value  # Unpack to a single scalar
+        else:
+            raise ValueError(f"Unsupported pad_value type {type(pad_value)}")
+
+        constant_values = pad_value
+        padding_values = (pad_h, pad_w)
+
+    return np.pad(image, pad_width=padding_values, mode="constant", constant_values=constant_values)
+
+
+def _rescale_and_pad_to_size(image: np.ndarray, output_shape: Tuple[int, int], swap: Tuple[int] = (2, 0, 1), pad_val: int = 114) -> Tuple[np.ndarray, float]:
+    """
+    Rescales image according to minimum ratio input height/width and output height/width rescaled_padded_image,
+    pads the image to the target shape and finally swap axis.
+    Note: Pads the image to corner, padding is not centered.
+
+    :param image:           Image to be rescaled. (H, W, C) or (H, W).
+    :param output_shape:    Target Shape.
+    :param swap:            Axis's to be rearranged.
+    :param pad_val:         Value to use for padding.
+    :return:
+        - Rescaled image while preserving aspect ratio, padded to fit output_shape and with axis swapped. By default, (C, H, W).
+        - Minimum ratio between the input height/width and output height/width.
+    """
+    r = min(output_shape[0] / image.shape[0], output_shape[1] / image.shape[1])
+    rescale_shape = (int(image.shape[0] * r), int(image.shape[1] * r))
+
+    resized_image = _rescale_image(image=image, target_shape=rescale_shape)
+
+    padding_coordinates = _get_bottom_right_padding_coordinates(input_shape=rescale_shape, output_shape=output_shape)
+    padded_image = _pad_image(image=resized_image, padding_coordinates=padding_coordinates, pad_value=pad_val)
+
+    padded_image = padded_image.transpose(swap)
+    padded_image = np.ascontiguousarray(padded_image, dtype=np.float32)
+    return padded_image, r
+
+
+def scale_results_back(results,r):
+    num_predictions, pred_boxes, pred_scores, pred_classes = results
+    pred_boxes /= r
+    return num_predictions, pred_boxes, pred_scores, pred_classes
 
 
 class Preprocessing:
@@ -47,7 +159,8 @@ class Preprocessing:
 
     def _standarize(self, img, max_value):
         """standarize img based on max value"""
-        return (img / max_value).astype(np.float32), None
+        # return (img / max_value).astype(np.float32), None
+        return img, None
 
     def _det_rescale(self, img):
         """Rescale image to output based with scale factors"""
@@ -138,6 +251,8 @@ class Preprocessing:
             if not st:  # if steps isn't None
                 continue
             name, kwargs = list(st.items())[0]
+            if not self._call_fn(name):
+                continue
             img, meta = (
                 self._call_fn(name)(img, **kwargs)
                 if kwargs
@@ -146,6 +261,7 @@ class Preprocessing:
             metadata.append(meta)
 
         img = cv2.dnn.blobFromImage(img, swapRB=True)
+        img = img.astype(np.uint8)
         return img, metadata
 
 
@@ -302,9 +418,25 @@ class YOLO_NAS(Model):
             logger.warning(e)
             return []
 
-        blob, prep_meta = self.preprocess(image)
-        outputs = self.net.get_ort_inference(blob, extract=False)
-        boxes, scores, classes = self.postprocess(outputs, prep_meta)
+        # blob, prep_meta = self.preprocess(image)
+        # outputs = self.net.get_ort_inference(blob, extract=False)
+        # boxes, scores, classes = self.postprocess(outputs, prep_meta)
+
+        # img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        img = image
+        img, r = _rescale_and_pad_to_size(img, (640, 640))
+        img = img.astype(np.uint8)
+        image_bchw = np.expand_dims(img, 0)
+        results = self.net.get_ort_inference(image_bchw, extract=False, squeeze=False)
+        results = scale_results_back(results, r)
+        num_predictions, pred_boxes, pred_scores, pred_classes = results
+        num_predictions = int(num_predictions.item())
+        boxes = pred_boxes[0, :num_predictions]
+        boxes[:, 2] -= boxes[:, 0]
+        boxes[:, 3] -= boxes[:, 1]
+        scores = pred_scores[0, :num_predictions]
+        classes = pred_classes[0, :num_predictions]
+
         score_thres = self.conf_thres
         iou_thres = self.nms_thres
         selected = cv2.dnn.NMSBoxes(boxes, scores, score_thres, iou_thres)

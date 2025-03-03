@@ -1,0 +1,17 @@
+type: yolo_nas
+name: yolo_nas_s_sep_blood
+display_name: YOLO-NAS-S Separated Blood
+model_path: models/phenota_sep_blood_detection.onnx
+nms_threshold: 0.45
+confidence_threshold: 0.30
+classes:
+- WBC_or_WBC-not-lymp
+- RBC
+- Lymphocyte
+- dry_cell
+- black_spot
+- black_granulation
+- eye_egg
+- scrambled_egg
+- doubted_broken
+- definitely_broken

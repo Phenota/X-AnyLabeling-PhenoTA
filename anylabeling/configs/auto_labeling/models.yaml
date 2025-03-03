@@ -264,3 +264,7 @@
   config_file: ":/yolox_l_dwpose_ucoco.yaml"
 - model_name: "yolox_s-r20230520"
   config_file: ":/yolox_s.yaml"
+- model_name: "yolo-nas-whole-blood"
+  config_file: ":/yolo-nas-whole-blood.yaml"
+- model_name: "yolo-nas-sep-blood"
+  config_file: ":/yolo-nas-sep-blood.yaml"
