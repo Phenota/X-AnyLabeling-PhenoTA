@@ -23,21 +23,16 @@ switch_to_checked: false
 flags: null
 label_flags: null
 labels:
+  - WBC_or_WBC-not-lymp
   - RBC
   - Lymphocyte
-  - Monocyte
-  - Granulocyte
-  - Dirt
-  - Neutrophil
-  - Basophil
-  - Eosinophil
-  - Platelet
-  - Clamp
-  - LGL
-  - Atypical
-  - Aberrant
-  - Unknown
-  - Smudge
+  - dry_cell
+  - black_spot
+  - black_granulation
+  - eye_egg
+  - scrambled_egg
+  - doubted_broken
+  - definitely_broken
 file_search: null
 sort_labels: true
 validate_label: null
@@ -162,23 +157,25 @@ shortcuts:
   auto_run: Ctrl+M
 
 labels_shortcuts:
+  - label: WBC_or_WBC-not-lymp
+    shortcut: '0'
   - label: RBC
     shortcut: '1'
   - label: Lymphocyte
     shortcut: '2'
-  - label: Monocyte
+  - label: dry_cell
     shortcut: '3'
-  - label: Granulocyte
+  - label: black_spot
     shortcut: '4'
-  - label: Dirt
+  - label: black_granulation
     shortcut: '5'
-  - label: Neutrophil
+  - label: eye_egg
     shortcut: '6'
-  - label: Basophil
+  - label: scrambled_egg
     shortcut: '7'
-  - label: Eosinophil
+  - label: doubted_broken
     shortcut: '8'
-  - label: Platelet
+  - label: definitely_broken
     shortcut: '9'
   - label: Clamp
     shortcut: Ctrl+9
@@ -188,8 +185,6 @@ labels_shortcuts:
     shortcut: Ctrl+2
   - label: Aberrant
     shortcut: Ctrl+3
-  - label: Unknown
-    shortcut: '0'
   - label: Smudge
     shortcut: Ctrl+4
 
