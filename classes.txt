@@ -8,3 +8,4 @@ eye_egg
 scrambled_egg
 doubted_broken
 definitely_broken
+platelet

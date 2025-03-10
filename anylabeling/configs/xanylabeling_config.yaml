@@ -33,6 +33,7 @@ labels:
   - scrambled_egg
   - doubted_broken
   - definitely_broken
+  - platelet
 file_search: null
 sort_labels: true
 validate_label: null
@@ -177,16 +178,8 @@ labels_shortcuts:
     shortcut: '8'
   - label: definitely_broken
     shortcut: '9'
-  - label: Clamp
-    shortcut: Ctrl+9
-  - label: LGL
-    shortcut: Ctrl+1
-  - label: Atypical
+  - label: platelet
     shortcut: Ctrl+2
-  - label: Aberrant
-    shortcut: Ctrl+3
-  - label: Smudge
-    shortcut: Ctrl+4
 
 
 # Auto labeling
